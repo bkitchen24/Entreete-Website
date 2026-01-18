@@ -4,6 +4,16 @@ import { useState, useEffect } from "react";
 import usePlacesAutocomplete, { getDetails } from "use-places-autocomplete";
 import { Search, MapPin } from "lucide-react";
 
+// Extend Window interface to include Google Maps
+declare global {
+  interface Window {
+    google?: {
+      maps?: unknown;
+      [key: string]: unknown;
+    };
+  }
+}
+
 interface BusinessSearchProps {
   onSelect: (restaurant: { name: string; location: string }) => void;
   apiKey: string;
@@ -19,7 +29,7 @@ export default function BusinessSearch({ onSelect, apiKey }: BusinessSearchProps
   // Load Google Maps script
   useEffect(() => {
     if (typeof window !== "undefined") {
-      if (window.google) {
+      if ('google' in window && (window as any).google) {
         setIsScriptLoaded(true);
         return;
       }
@@ -63,7 +73,7 @@ export default function BusinessSearch({ onSelect, apiKey }: BusinessSearchProps
 
   // Initialize the hook when script is loaded
   useEffect(() => {
-    if (isScriptLoaded && !ready && typeof window !== "undefined" && window.google) {
+    if (isScriptLoaded && !ready && typeof window !== "undefined" && 'google' in window && (window as any).google) {
       // Force re-initialization by calling setValue with empty string
       setValue("", false);
     }
