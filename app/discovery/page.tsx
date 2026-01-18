@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useUser } from "@clerk/nextjs";
-import { reviews as allReviews, getUserById, getDishById, deleteReview } from "../data";
+import { reviews as allReviews, getUserById, getDishById, deleteReview, getStorageItem } from "../data";
 import ReviewCard from "../components/ReviewCard";
 import Navigation from "../components/Navigation";
 import { Review, Dish, User } from "../types";
@@ -12,8 +12,25 @@ export default function DiscoveryPage() {
   const [feedReviews, setFeedReviews] = useState<(Review & { dish: Dish; user: User })[]>([]);
 
   useEffect(() => {
-    // Get all reviews sorted by most recent
-    const sortedReviews = [...allReviews].sort(
+    // Get all reviews sorted by most recent - always read fresh from localStorage
+    const freshReviews = typeof window !== "undefined" 
+      ? (() => {
+          try {
+            const item = localStorage.getItem("entreete_reviews");
+            if (item) {
+              const parsed = JSON.parse(item);
+              return parsed.map((r: any) => ({
+                ...r,
+                createdAt: new Date(r.createdAt)
+              }));
+            }
+          } catch (error) {
+            console.error("Error loading reviews:", error);
+          }
+          return [];
+        })()
+      : [];
+    const sortedReviews = [...freshReviews].sort(
       (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
     );
 
@@ -46,8 +63,25 @@ export default function DiscoveryPage() {
 
     try {
       deleteReview(reviewId, clerkUser.id);
-      // Refresh feed - get all reviews sorted by most recent
-      const sortedReviews = [...allReviews].sort(
+      // Refresh feed - get all reviews sorted by most recent - always read fresh from localStorage
+      const freshReviews = typeof window !== "undefined" 
+        ? (() => {
+            try {
+              const item = localStorage.getItem("entreete_reviews");
+              if (item) {
+                const parsed = JSON.parse(item);
+                return parsed.map((r: any) => ({
+                  ...r,
+                  createdAt: new Date(r.createdAt)
+                }));
+              }
+            } catch (error) {
+              console.error("Error loading reviews:", error);
+            }
+            return [];
+          })()
+        : [];
+      const sortedReviews = [...freshReviews].sort(
         (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
       );
       const enrichedReviews: (Review & { dish: Dish; user: User })[] = sortedReviews

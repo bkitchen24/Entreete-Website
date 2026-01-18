@@ -13,7 +13,7 @@ const defaultDishes: Dish[] = [
 ];
 
 // localStorage helpers
-function getStorageItem<T>(key: string, defaultValue: T): T {
+export function getStorageItem<T>(key: string, defaultValue: T): T {
   if (typeof window === "undefined") return defaultValue;
   try {
     const item = localStorage.getItem(key);
@@ -87,19 +87,31 @@ function reloadDataFromStorage() {
 
 // Helper functions
 export function getDishById(id: string): Dish | undefined {
-  return dishes.find((d) => d.id === id);
+  // Always get fresh data from localStorage
+  const freshDishes = getStorageItem("entreete_dishes", defaultDishes);
+  dishes = freshDishes; // Update the module variable
+  return freshDishes.find((d) => d.id === id);
 }
 
 export function getUserById(id: string): User | undefined {
-  return users.find((u) => u.id === id);
+  // Always get fresh data from localStorage
+  const freshUsers = getStorageItem("entreete_users", defaultUsers);
+  users = freshUsers; // Update the module variable
+  return freshUsers.find((u) => u.id === id);
 }
 
 export function getReviewsByDishId(dishId: string): Review[] {
-  return reviews.filter((r) => r.dishId === dishId);
+  // Always get fresh data from localStorage
+  const freshReviews = getStorageItem("entreete_reviews", []);
+  reviews = freshReviews; // Update the module variable
+  return freshReviews.filter((r) => r.dishId === dishId);
 }
 
 export function getReviewsByUserId(userId: string): Review[] {
-  return reviews.filter((r) => r.userId === userId);
+  // Always get fresh data from localStorage
+  const freshReviews = getStorageItem("entreete_reviews", []);
+  reviews = freshReviews; // Update the module variable
+  return freshReviews.filter((r) => r.userId === userId);
 }
 
 export function getDiscoveryFeed(userId: string): Review[] {

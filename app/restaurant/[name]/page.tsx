@@ -18,14 +18,30 @@ export default function RestaurantPage() {
     : "";
   
   const [showAddForm, setShowAddForm] = useState(false);
-  const [restaurantDishes, setRestaurantDishes] = useState(
-    dishes.filter((dish) => dish.restaurant === restaurantName)
-  );
+  
+  // Function to load fresh dishes from localStorage
+  const loadDishes = () => {
+    const freshDishes = typeof window !== "undefined"
+      ? (() => {
+          try {
+            const item = localStorage.getItem("entreete_dishes");
+            if (item) {
+              return JSON.parse(item);
+            }
+          } catch (error) {
+            console.error("Error loading dishes:", error);
+          }
+          return dishes; // Fallback to module dishes
+        })()
+      : dishes;
+    return freshDishes.filter((dish: any) => dish.restaurant === restaurantName);
+  };
+  
+  const [restaurantDishes, setRestaurantDishes] = useState(loadDishes());
 
-  // Update dishes when the dishes array changes (for when new dishes are added)
+  // Update dishes when the restaurant name changes or when dishes are added
   useEffect(() => {
-    const filtered = dishes.filter((dish) => dish.restaurant === restaurantName);
-    setRestaurantDishes(filtered);
+    setRestaurantDishes(loadDishes());
   }, [restaurantName]);
   
   if (!restaurantName) {
@@ -84,9 +100,8 @@ export default function RestaurantPage() {
               restaurantLocation="Eagle Mountain, UT"
               onDishAdded={() => {
                 setShowAddForm(false);
-                // Refresh dishes list
-                const filtered = dishes.filter((dish) => dish.restaurant === restaurantName);
-                setRestaurantDishes(filtered);
+                // Refresh dishes list from localStorage
+                setRestaurantDishes(loadDishes());
               }}
               onCancel={() => setShowAddForm(false)}
             />
