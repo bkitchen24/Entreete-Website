@@ -10,7 +10,7 @@ import { Review } from "../types";
 
 export default function ProfilePage() {
   const { user: clerkUser, isSignedIn } = useUser();
-  const [user, setUser] = useState<ReturnType<typeof getUserById>>(null);
+  const [user, setUser] = useState<ReturnType<typeof getUserById> | null>(null);
   const [userReviews, setUserReviews] = useState<(Review & { dish: ReturnType<typeof getDishById> })[]>([]);
 
   useEffect(() => {
