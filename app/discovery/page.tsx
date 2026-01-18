@@ -20,8 +20,19 @@ export default function DiscoveryPage() {
     const enrichedReviews: (Review & { dish: Dish; user: User })[] = sortedReviews
       .map((review) => {
         const dish = getDishById(review.dishId);
-        const user = getUserById(review.userId);
-        if (dish && user) {
+        let user = getUserById(review.userId);
+        // If user not found, create a fallback user object
+        if (!user) {
+          user = {
+            id: review.userId,
+            name: "Unknown User",
+            username: `@user${review.userId.slice(0, 8)}`,
+            following: [],
+            reviewedCategories: [],
+            varietyScore: 0,
+          };
+        }
+        if (dish) {
           return { ...review, dish, user };
         }
         return null;
@@ -42,8 +53,19 @@ export default function DiscoveryPage() {
       const enrichedReviews: (Review & { dish: Dish; user: User })[] = sortedReviews
         .map((review) => {
           const dish = getDishById(review.dishId);
-          const user = getUserById(review.userId);
-          if (dish && user) {
+          let user = getUserById(review.userId);
+          // If user not found, create a fallback user object
+          if (!user) {
+            user = {
+              id: review.userId,
+              name: "Unknown User",
+              username: `@user${review.userId.slice(0, 8)}`,
+              following: [],
+              reviewedCategories: [],
+              varietyScore: 0,
+            };
+          }
+          if (dish) {
             return { ...review, dish, user };
           }
           return null;

@@ -162,8 +162,18 @@ export default function DishPage() {
           ) : (
             <div className="space-y-4">
               {reviews.map((review) => {
-                const user = getUserById(review.userId);
-                if (!user) return null;
+                let user = getUserById(review.userId);
+                // If user not found, create a fallback user object
+                if (!user) {
+                  user = {
+                    id: review.userId,
+                    name: "Unknown User",
+                    username: `@user${review.userId.slice(0, 8)}`,
+                    following: [],
+                    reviewedCategories: [],
+                    varietyScore: 0,
+                  };
+                }
                 return (
                   <ReviewCard
                     key={review.id}

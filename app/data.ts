@@ -78,6 +78,13 @@ const defaultUsers: User[] = [
 
 export let users: User[] = getStorageItem("entreete_users", defaultUsers);
 
+// Helper function to reload data from localStorage
+function reloadDataFromStorage() {
+  dishes = getStorageItem("entreete_dishes", defaultDishes);
+  reviews = getStorageItem("entreete_reviews", []);
+  users = getStorageItem("entreete_users", defaultUsers);
+}
+
 // Helper functions
 export function getDishById(id: string): Dish | undefined {
   return dishes.find((d) => d.id === id);
@@ -132,7 +139,8 @@ export function getOrCreateUserFromClerkId(clerkUserId: string, clerkUserName?: 
     if (clerkUserImageUrl) user.avatar = clerkUserImageUrl;
     setStorageItem("entreete_users", users);
   }
-  
+  // Reload to ensure all components see the update
+  reloadDataFromStorage();
   return user;
 }
 
@@ -170,6 +178,8 @@ export function addReview(
   reviews.push(newReview);
   setStorageItem("entreete_reviews", reviews);
   setStorageItem("entreete_users", users);
+  // Reload to ensure all components see the update
+  reloadDataFromStorage();
   return newReview;
 }
 
@@ -212,6 +222,8 @@ export function deleteReview(reviewId: string, userId: string): boolean {
   }
   
   setStorageItem("entreete_users", users);
+  // Reload to ensure all components see the update
+  reloadDataFromStorage();
   return true;
 }
 
@@ -231,5 +243,7 @@ export function addDish(
   };
   dishes.push(newDish);
   setStorageItem("entreete_dishes", dishes);
+  // Reload to ensure all components see the update
+  reloadDataFromStorage();
   return newDish;
 }
