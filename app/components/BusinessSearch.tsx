@@ -36,10 +36,11 @@ export default function BusinessSearch({ onSelect, apiKey }: BusinessSearchProps
       
       const existingScript = document.querySelector(
         `script[src*="maps.googleapis.com"]`
-      );
+      ) as HTMLScriptElement | null;
       if (existingScript) {
         existingScript.addEventListener("load", () => setIsScriptLoaded(true));
-        if ((existingScript as HTMLScriptElement).complete) {
+        // Check if script is already loaded by checking if google is available
+        if ('google' in window && (window as any).google) {
           setIsScriptLoaded(true);
         }
         return;
