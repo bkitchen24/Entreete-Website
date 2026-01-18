@@ -6,12 +6,12 @@ import { getUserById, getReviewsByUserId, getDishById, getOrCreateUserFromClerkI
 import UserProfile from "../components/UserProfile";
 import ReviewCard from "../components/ReviewCard";
 import Navigation from "../components/Navigation";
-import { Review } from "../types";
+import { Review, Dish } from "../types";
 
 export default function ProfilePage() {
   const { user: clerkUser, isSignedIn } = useUser();
   const [user, setUser] = useState<ReturnType<typeof getUserById> | null>(null);
-  const [userReviews, setUserReviews] = useState<(Review & { dish: ReturnType<typeof getDishById> })[]>([]);
+  const [userReviews, setUserReviews] = useState<(Review & { dish: Dish })[]>([]);
 
   useEffect(() => {
     if (!isSignedIn || !clerkUser) {
@@ -29,7 +29,7 @@ export default function ProfilePage() {
     setUser(appUser);
 
     const reviews = getReviewsByUserId(appUser.id);
-    const enrichedReviews = reviews
+    const enrichedReviews: (Review & { dish: Dish })[] = reviews
       .map((review) => {
         const dish = getDishById(review.dishId);
         if (dish) {
@@ -37,7 +37,7 @@ export default function ProfilePage() {
         }
         return null;
       })
-      .filter((r): r is NonNullable<typeof r> => r !== null);
+      .filter((r): r is Review & { dish: Dish } => r !== null);
     setUserReviews(enrichedReviews);
   }, [isSignedIn, clerkUser]);
 
@@ -48,7 +48,7 @@ export default function ProfilePage() {
       deleteReview(reviewId, clerkUser.id);
       // Refresh reviews
       const reviews = getReviewsByUserId(clerkUser.id);
-      const enrichedReviews = reviews
+      const enrichedReviews: (Review & { dish: Dish })[] = reviews
         .map((review) => {
           const dish = getDishById(review.dishId);
           if (dish) {
@@ -56,7 +56,7 @@ export default function ProfilePage() {
           }
           return null;
         })
-        .filter((r): r is NonNullable<typeof r> => r !== null);
+        .filter((r): r is Review & { dish: Dish } => r !== null);
       setUserReviews(enrichedReviews);
     } catch (error) {
       console.error("Error deleting review:", error);
