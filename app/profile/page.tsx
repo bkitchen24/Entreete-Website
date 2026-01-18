@@ -6,11 +6,11 @@ import { getUserById, getReviewsByUserId, getDishById, getOrCreateUserFromClerkI
 import UserProfile from "../components/UserProfile";
 import ReviewCard from "../components/ReviewCard";
 import Navigation from "../components/Navigation";
-import { Review, Dish } from "../types";
+import { Review, Dish, User } from "../types";
 
 export default function ProfilePage() {
   const { user: clerkUser, isSignedIn } = useUser();
-  const [user, setUser] = useState<ReturnType<typeof getUserById> | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [userReviews, setUserReviews] = useState<(Review & { dish: Dish })[]>([]);
 
   useEffect(() => {
