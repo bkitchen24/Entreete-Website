@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useUser } from "@clerk/nextjs";
 import { getAllDishes, getAllReviews, getUserById, getDishById } from "./data";
 import RestaurantCard from "./components/RestaurantCard";
@@ -42,6 +42,20 @@ export default function Home() {
     location: string;
   } | null>(null);
   const [tempDish, setTempDish] = useState<Partial<Dish> | null>(null);
+  const [restaurantReviewCounts, setRestaurantReviewCounts] = useState<Map<string, number>>(new Map());
+  
+  // Load review counts for restaurants
+  useEffect(() => {
+    async function loadReviewCounts() {
+      const counts = new Map<string, number>();
+      for (const restaurant of eagleMountainRestaurants) {
+        const count = await getReviewCountForRestaurant(restaurant.name);
+        counts.set(restaurant.name, count);
+      }
+      setRestaurantReviewCounts(counts);
+    }
+    loadReviewCounts();
+  }, []);
 
   const handleRestaurantSelect = (restaurant: { name: string; location: string }) => {
     setSelectedRestaurant(restaurant);
@@ -170,7 +184,7 @@ export default function Home() {
               key={`restaurant-${index}`}
               name={restaurant.name}
               location={restaurant.location}
-              reviewCount={getReviewCountForRestaurant(restaurant.name)}
+              reviewCount={restaurantReviewCounts.get(restaurant.name) || 0}
               onClick={() => {
                 // Navigate to restaurant detail page
                 router.push(`/restaurant/${encodeURIComponent(restaurant.name)}`);
