@@ -14,49 +14,48 @@ export default function ProfilePage() {
   const [userReviews, setUserReviews] = useState<(Review & { dish: Dish })[]>([]);
 
   useEffect(() => {
-    if (!isSignedIn || !clerkUser) {
-      setUser(null);
-      setUserReviews([]);
-      return;
-    }
+    async function loadUserData() {
+      if (!isSignedIn || !clerkUser) {
+        setUser(null);
+        setUserReviews([]);
+        return;
+      }
 
-    // Get or create user from Clerk
-    const appUser = getOrCreateUserFromClerkId(
-      clerkUser.id,
-      clerkUser.fullName || clerkUser.firstName || undefined,
-      clerkUser.imageUrl
-    );
-    setUser(appUser);
+      // Get or create user from Clerk
+      const appUser = await getOrCreateUserFromClerkId(
+        clerkUser.id,
+        clerkUser.fullName || clerkUser.firstName || undefined,
+        clerkUser.imageUrl
+      );
+      setUser(appUser);
 
-    const reviews = getReviewsByUserId(appUser.id);
-    const enrichedReviews: (Review & { dish: Dish })[] = reviews
-      .map((review) => {
-        const dish = getDishById(review.dishId);
+      const reviews = await getReviewsByUserId(appUser.id);
+      const enrichedReviews: (Review & { dish: Dish })[] = [];
+      for (const review of reviews) {
+        const dish = await getDishById(review.dishId);
         if (dish) {
-          return { ...review, dish };
+          enrichedReviews.push({ ...review, dish });
         }
-        return null;
-      })
-      .filter((r): r is Review & { dish: Dish } => r !== null);
-    setUserReviews(enrichedReviews);
+      }
+      setUserReviews(enrichedReviews);
+    }
+    loadUserData();
   }, [isSignedIn, clerkUser]);
 
-  const handleDeleteReview = (reviewId: string) => {
+  const handleDeleteReview = async (reviewId: string) => {
     if (!isSignedIn || !clerkUser) return;
 
     try {
-      deleteReview(reviewId, clerkUser.id);
+      await deleteReview(reviewId, clerkUser.id);
       // Refresh reviews
-      const reviews = getReviewsByUserId(clerkUser.id);
-      const enrichedReviews: (Review & { dish: Dish })[] = reviews
-        .map((review) => {
-          const dish = getDishById(review.dishId);
-          if (dish) {
-            return { ...review, dish };
-          }
-          return null;
-        })
-        .filter((r): r is Review & { dish: Dish } => r !== null);
+      const reviews = await getReviewsByUserId(clerkUser.id);
+      const enrichedReviews: (Review & { dish: Dish })[] = [];
+      for (const review of reviews) {
+        const dish = await getDishById(review.dishId);
+        if (dish) {
+          enrichedReviews.push({ ...review, dish });
+        }
+      }
       setUserReviews(enrichedReviews);
     } catch (error) {
       console.error("Error deleting review:", error);

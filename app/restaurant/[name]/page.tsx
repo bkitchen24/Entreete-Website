@@ -2,12 +2,34 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { dishes, getReviewsByDishId } from "../../data";
+import { getAllDishes, getReviewsByDishId } from "../../data";
 import DishCard from "../../components/DishCard";
 import AddDishForm from "../../components/AddDishForm";
 import Navigation from "../../components/Navigation";
 import { Plus, ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { Dish } from "../../types";
+
+// Component to load review count for each dish
+function DishCardWithReviews({ dish, onSelect }: { dish: Dish; onSelect: (dish: Dish) => void }) {
+  const [reviewCount, setReviewCount] = useState(0);
+  
+  useEffect(() => {
+    async function loadReviewCount() {
+      const reviews = await getReviewsByDishId(dish.id);
+      setReviewCount(reviews.length);
+    }
+    loadReviewCount();
+  }, [dish.id]);
+  
+  return (
+    <DishCard
+      dish={dish}
+      reviewCount={reviewCount}
+      onSelect={onSelect}
+    />
+  );
+}
 
 export default function RestaurantPage() {
   const params = useParams();
@@ -18,30 +40,21 @@ export default function RestaurantPage() {
     : "";
   
   const [showAddForm, setShowAddForm] = useState(false);
+  const [restaurantDishes, setRestaurantDishes] = useState<any[]>([]);
   
-  // Function to load fresh dishes from localStorage
-  const loadDishes = () => {
-    const freshDishes = typeof window !== "undefined"
-      ? (() => {
-          try {
-            const item = localStorage.getItem("entreete_dishes");
-            if (item) {
-              return JSON.parse(item);
-            }
-          } catch (error) {
-            console.error("Error loading dishes:", error);
-          }
-          return dishes; // Fallback to module dishes
-        })()
-      : dishes;
-    return freshDishes.filter((dish: any) => dish.restaurant === restaurantName);
+  // Function to load fresh dishes
+  const loadDishes = async () => {
+    const allDishes = await getAllDishes();
+    return allDishes.filter((dish) => dish.restaurant === restaurantName);
   };
-  
-  const [restaurantDishes, setRestaurantDishes] = useState(loadDishes());
 
-  // Update dishes when the restaurant name changes or when dishes are added
+  // Load dishes when component mounts or restaurant name changes
   useEffect(() => {
-    setRestaurantDishes(loadDishes());
+    async function fetchDishes() {
+      const dishes = await loadDishes();
+      setRestaurantDishes(dishes);
+    }
+    fetchDishes();
   }, [restaurantName]);
   
   if (!restaurantName) {
@@ -98,10 +111,11 @@ export default function RestaurantPage() {
             <AddDishForm
               restaurantName={restaurantName}
               restaurantLocation="Eagle Mountain, UT"
-              onDishAdded={() => {
+              onDishAdded={async () => {
                 setShowAddForm(false);
-                // Refresh dishes list from localStorage
-                setRestaurantDishes(loadDishes());
+                // Refresh dishes list
+                const dishes = await loadDishes();
+                setRestaurantDishes(dishes);
               }}
               onCancel={() => setShowAddForm(false)}
             />
@@ -131,20 +145,15 @@ export default function RestaurantPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {restaurantDishes.map((dish) => {
-                const reviewCount = getReviewsByDishId(dish.id).length;
-                return (
-                  <DishCard
-                    key={dish.id}
-                    dish={dish}
-                    reviewCount={reviewCount}
-                    onSelect={(dish) => {
-                      // Navigate to dish detail page
-                      router.push(`/dish/${encodeURIComponent(dish.id)}`);
-                    }}
-                  />
-                );
-              })}
+              {restaurantDishes.map((dish) => (
+                <DishCardWithReviews
+                  key={dish.id}
+                  dish={dish}
+                  onSelect={(dish) => {
+                    router.push(`/dish/${encodeURIComponent(dish.id)}`);
+                  }}
+                />
+              ))}
             </div>
           )}
         </div>

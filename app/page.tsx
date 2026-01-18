@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useUser } from "@clerk/nextjs";
-import { dishes, getUserById, getDishById, reviews } from "./data";
+import { getAllDishes, getAllReviews, getUserById, getDishById } from "./data";
 import RestaurantCard from "./components/RestaurantCard";
 import BusinessSearch from "./components/BusinessSearch";
 import Navigation from "./components/Navigation";
@@ -24,9 +24,12 @@ const eagleMountainRestaurants = [
 ];
 
 // Helper function to count reviews for a restaurant
-function getReviewCountForRestaurant(restaurantName: string): number {
-  return reviews.filter((review) => {
-    const dish = getDishById(review.dishId);
+async function getReviewCountForRestaurant(restaurantName: string): Promise<number> {
+  const allReviews = await getAllReviews();
+  const allDishes = await getAllDishes();
+  const dishMap = new Map(allDishes.map(d => [d.id, d]));
+  return allReviews.filter((review) => {
+    const dish = dishMap.get(review.dishId);
     return dish && dish.restaurant === restaurantName;
   }).length;
 }
@@ -54,7 +57,7 @@ export default function Home() {
     
     try {
       const { addDish } = await import("./data");
-      const newDish = addDish(
+      const newDish = await addDish(
         tempDish.name!,
         selectedRestaurant.name,
         tempDish.category!,

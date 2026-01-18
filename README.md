@@ -16,7 +16,26 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 npm install
 ```
 
-### 2. Set Up Google Maps API (Optional)
+### 2. Set Up Supabase Database (Required for Data Persistence)
+
+To store data on the server instead of in the browser:
+
+1. Go to [Supabase](https://supabase.com/) and create a free account
+2. Create a new project
+3. Go to **Settings** → **API** and copy:
+   - **Project URL** (your `NEXT_PUBLIC_SUPABASE_URL`)
+   - **anon/public key** (your `NEXT_PUBLIC_SUPABASE_ANON_KEY`)
+4. Go to **SQL Editor** in your Supabase dashboard
+5. Copy and paste the contents of `supabase-setup.sql` into the SQL Editor
+6. Click **Run** to create the database tables
+7. Add these to your `.env.local` file:
+
+```bash
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
+
+### 3. Set Up Google Maps API (Optional)
 
 To enable restaurant search functionality:
 
@@ -26,7 +45,7 @@ To enable restaurant search functionality:
    - **Places API (New)**
    - **Maps JavaScript API**
 4. Create an API key in the Credentials section
-5. Create a `.env.local` file in the root directory:
+5. Add to your `.env.local` file:
 
 ```bash
 NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your_api_key_here
@@ -34,7 +53,7 @@ NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your_api_key_here
 
 **Note**: The app will work without the API key, but the restaurant search feature will be disabled.
 
-### 3. Run the Development Server
+### 4. Run the Development Server
 
 First, run the development server:
 

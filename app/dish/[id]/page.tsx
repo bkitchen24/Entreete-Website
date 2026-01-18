@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { getDishById, getReviewsByDishId, getUserById, getOrCreateUserFromClerkId, addReview, deleteReview } from "../../data";
+import { Dish, Review, User } from "../../types";
 import ReviewForm from "../../components/ReviewForm";
 import ReviewCard from "../../components/ReviewCard";
 import Navigation from "../../components/Navigation";
@@ -16,42 +17,71 @@ export default function DishPage() {
   const { user: clerkUser, isSignedIn } = useUser();
   const dishId = params.id as string;
   
-  const [dish, setDish] = useState(getDishById(dishId));
-  const [reviews, setReviews] = useState(getReviewsByDishId(dishId));
+  const [dish, setDish] = useState<Dish | undefined>(undefined);
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [reviewUsers, setReviewUsers] = useState<Map<string, User>>(new Map());
   const [showReviewForm, setShowReviewForm] = useState(false);
 
   useEffect(() => {
-    const currentDish = getDishById(dishId);
-    setDish(currentDish);
-    if (currentDish) {
-      setReviews(getReviewsByDishId(dishId));
+    async function loadData() {
+      const currentDish = await getDishById(dishId);
+      setDish(currentDish);
+      if (currentDish) {
+        const dishReviews = await getReviewsByDishId(dishId);
+        setReviews(dishReviews);
+        
+        // Load all users for the reviews
+        const usersMap = new Map<string, User>();
+        for (const review of dishReviews) {
+          if (!usersMap.has(review.userId)) {
+            const user = await getUserById(review.userId);
+            if (user) {
+              usersMap.set(review.userId, user);
+            } else {
+              // Fallback user
+              usersMap.set(review.userId, {
+                id: review.userId,
+                name: "Unknown User",
+                username: `@user${review.userId.slice(0, 8)}`,
+                following: [],
+                reviewedCategories: [],
+                varietyScore: 0,
+              });
+            }
+          }
+        }
+        setReviewUsers(usersMap);
+      }
     }
+    loadData();
   }, [dishId]);
 
-  const handleReviewSubmit = (rating: number, comment: string, imageUrl?: string) => {
+  const handleReviewSubmit = async (rating: number, comment: string, imageUrl?: string) => {
     if (!dish || !isSignedIn || !clerkUser) return;
 
     try {
-      const appUser = getOrCreateUserFromClerkId(
+      const appUser = await getOrCreateUserFromClerkId(
         clerkUser.id,
         clerkUser.fullName || clerkUser.firstName || undefined,
         clerkUser.imageUrl
       );
       
-      addReview(dish.id, appUser.id, rating, comment, imageUrl);
-      setReviews(getReviewsByDishId(dishId));
+      await addReview(dish.id, appUser.id, rating, comment, imageUrl);
+      const dishReviews = await getReviewsByDishId(dishId);
+      setReviews(dishReviews);
       setShowReviewForm(false);
     } catch (error) {
       console.error("Error submitting review:", error);
     }
   };
 
-  const handleDeleteReview = (reviewId: string) => {
+  const handleDeleteReview = async (reviewId: string) => {
     if (!isSignedIn || !clerkUser) return;
 
     try {
-      deleteReview(reviewId, clerkUser.id);
-      setReviews(getReviewsByDishId(dishId));
+      await deleteReview(reviewId, clerkUser.id);
+      const dishReviews = await getReviewsByDishId(dishId);
+      setReviews(dishReviews);
     } catch (error) {
       console.error("Error deleting review:", error);
       alert(error instanceof Error ? error.message : "Failed to delete review");
@@ -162,18 +192,14 @@ export default function DishPage() {
           ) : (
             <div className="space-y-4">
               {reviews.map((review) => {
-                let user = getUserById(review.userId);
-                // If user not found, create a fallback user object
-                if (!user) {
-                  user = {
-                    id: review.userId,
-                    name: "Unknown User",
-                    username: `@user${review.userId.slice(0, 8)}`,
-                    following: [],
-                    reviewedCategories: [],
-                    varietyScore: 0,
-                  };
-                }
+                const user = reviewUsers.get(review.userId) || {
+                  id: review.userId,
+                  name: "Unknown User",
+                  username: `@user${review.userId.slice(0, 8)}`,
+                  following: [],
+                  reviewedCategories: [],
+                  varietyScore: 0,
+                };
                 return (
                   <ReviewCard
                     key={review.id}

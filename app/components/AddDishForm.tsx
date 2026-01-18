@@ -25,7 +25,7 @@ export default function AddDishForm({ restaurantName, restaurantLocation, onDish
     try {
       // Import dynamically to avoid circular dependencies
       const { addDish } = await import("../data");
-      addDish(name, restaurantName, category as FoodCategory, restaurantLocation);
+      await addDish(name, restaurantName, category as FoodCategory, restaurantLocation);
       onDishAdded();
       // Reset form
       setName("");

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useUser } from "@clerk/nextjs";
-import { reviews as allReviews, getUserById, getDishById, deleteReview, getStorageItem } from "../data";
+import { getAllReviews, getUserById, getDishById, deleteReview } from "../data";
 import ReviewCard from "../components/ReviewCard";
 import Navigation from "../components/Navigation";
 import { Review, Dish, User } from "../types";
@@ -12,32 +12,17 @@ export default function DiscoveryPage() {
   const [feedReviews, setFeedReviews] = useState<(Review & { dish: Dish; user: User })[]>([]);
 
   useEffect(() => {
-    // Get all reviews sorted by most recent - always read fresh from localStorage
-    const freshReviews = typeof window !== "undefined" 
-      ? (() => {
-          try {
-            const item = localStorage.getItem("entreete_reviews");
-            if (item) {
-              const parsed = JSON.parse(item);
-              return parsed.map((r: any) => ({
-                ...r,
-                createdAt: new Date(r.createdAt)
-              }));
-            }
-          } catch (error) {
-            console.error("Error loading reviews:", error);
-          }
-          return [];
-        })()
-      : [];
-    const sortedReviews = [...freshReviews].sort(
-      (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
-    );
+    async function loadReviews() {
+      // Get all reviews sorted by most recent
+      const allReviews = await getAllReviews();
+      const sortedReviews = [...allReviews].sort(
+        (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
+      );
 
-    const enrichedReviews: (Review & { dish: Dish; user: User })[] = sortedReviews
-      .map((review) => {
-        const dish = getDishById(review.dishId);
-        let user = getUserById(review.userId);
+      const enrichedReviews: (Review & { dish: Dish; user: User })[] = [];
+      for (const review of sortedReviews) {
+        const dish = await getDishById(review.dishId);
+        let user = await getUserById(review.userId);
         // If user not found, create a fallback user object
         if (!user) {
           user = {
@@ -50,61 +35,42 @@ export default function DiscoveryPage() {
           };
         }
         if (dish) {
-          return { ...review, dish, user };
+          enrichedReviews.push({ ...review, dish, user });
         }
-        return null;
-      })
-      .filter((r): r is Review & { dish: Dish; user: User } => r !== null);
-    setFeedReviews(enrichedReviews);
+      }
+      setFeedReviews(enrichedReviews);
+    }
+    loadReviews();
   }, []);
 
-  const handleDeleteReview = (reviewId: string) => {
+  const handleDeleteReview = async (reviewId: string) => {
     if (!isSignedIn || !clerkUser) return;
 
     try {
-      deleteReview(reviewId, clerkUser.id);
-      // Refresh feed - get all reviews sorted by most recent - always read fresh from localStorage
-      const freshReviews = typeof window !== "undefined" 
-        ? (() => {
-            try {
-              const item = localStorage.getItem("entreete_reviews");
-              if (item) {
-                const parsed = JSON.parse(item);
-                return parsed.map((r: any) => ({
-                  ...r,
-                  createdAt: new Date(r.createdAt)
-                }));
-              }
-            } catch (error) {
-              console.error("Error loading reviews:", error);
-            }
-            return [];
-          })()
-        : [];
-      const sortedReviews = [...freshReviews].sort(
+      await deleteReview(reviewId, clerkUser.id);
+      // Refresh feed
+      const allReviews = await getAllReviews();
+      const sortedReviews = [...allReviews].sort(
         (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
       );
-      const enrichedReviews: (Review & { dish: Dish; user: User })[] = sortedReviews
-        .map((review) => {
-          const dish = getDishById(review.dishId);
-          let user = getUserById(review.userId);
-          // If user not found, create a fallback user object
-          if (!user) {
-            user = {
-              id: review.userId,
-              name: "Unknown User",
-              username: `@user${review.userId.slice(0, 8)}`,
-              following: [],
-              reviewedCategories: [],
-              varietyScore: 0,
-            };
-          }
-          if (dish) {
-            return { ...review, dish, user };
-          }
-          return null;
-        })
-        .filter((r): r is Review & { dish: Dish; user: User } => r !== null);
+      const enrichedReviews: (Review & { dish: Dish; user: User })[] = [];
+      for (const review of sortedReviews) {
+        const dish = await getDishById(review.dishId);
+        let user = await getUserById(review.userId);
+        if (!user) {
+          user = {
+            id: review.userId,
+            name: "Unknown User",
+            username: `@user${review.userId.slice(0, 8)}`,
+            following: [],
+            reviewedCategories: [],
+            varietyScore: 0,
+          };
+        }
+        if (dish) {
+          enrichedReviews.push({ ...review, dish, user });
+        }
+      }
       setFeedReviews(enrichedReviews);
     } catch (error) {
       console.error("Error deleting review:", error);
