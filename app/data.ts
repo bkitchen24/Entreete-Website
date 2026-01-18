@@ -1,7 +1,7 @@
 import { Dish, Review, User, FoodCategory } from "./types";
 
-// Mock data store
-export const dishes: Dish[] = [
+// Default mock data
+const defaultDishes: Dish[] = [
   { id: "1", name: "Margherita Pizza", restaurant: "Tony's Italian", location: "123 Main St, New York, NY 10001", category: "Main Dish" },
   { id: "2", name: "Pad Thai", restaurant: "Bangkok Express", location: "456 Broadway, New York, NY 10013", category: "Main Dish" },
   { id: "3", name: "Tacos al Pastor", restaurant: "El Mariachi", location: "789 5th Ave, New York, NY 10022", category: "Main Dish" },
@@ -12,7 +12,44 @@ export const dishes: Dish[] = [
   { id: "8", name: "Pho", restaurant: "Saigon Street", location: "258 3rd Ave, New York, NY 10010", category: "Main Dish" },
 ];
 
-export const users: User[] = [
+// localStorage helpers
+function getStorageItem<T>(key: string, defaultValue: T): T {
+  if (typeof window === "undefined") return defaultValue;
+  try {
+    const item = localStorage.getItem(key);
+    if (item) {
+      const parsed = JSON.parse(item);
+      // Convert date strings back to Date objects
+      if (Array.isArray(parsed)) {
+        return parsed.map((item: any) => {
+          if (item.createdAt) {
+            return { ...item, createdAt: new Date(item.createdAt) };
+          }
+          return item;
+        }) as T;
+      }
+      return parsed;
+    }
+  } catch (error) {
+    console.error(`Error loading ${key} from localStorage:`, error);
+  }
+  return defaultValue;
+}
+
+function setStorageItem<T>(key: string, value: T): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (error) {
+    console.error(`Error saving ${key} to localStorage:`, error);
+  }
+}
+
+// Load data from localStorage or use defaults
+export let dishes: Dish[] = getStorageItem("entreete_dishes", defaultDishes);
+export let reviews: Review[] = getStorageItem("entreete_reviews", []);
+
+const defaultUsers: User[] = [
   {
     id: "user1",
     name: "Alex Chen",
@@ -39,48 +76,7 @@ export const users: User[] = [
   },
 ];
 
-export const reviews: Review[] = [
-  {
-    id: "r1",
-    dishId: "1",
-    userId: "user1",
-    rating: 8,
-    comment: "Great classic pizza!",
-    createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
-  },
-  {
-    id: "r2",
-    dishId: "2",
-    userId: "user2",
-    rating: 9,
-    comment: "Authentic and delicious!",
-    createdAt: new Date(Date.now() - 5 * 60 * 60 * 1000), // 5 hours ago
-  },
-  {
-    id: "r3",
-    dishId: "3",
-    userId: "user2",
-    rating: 7,
-    comment: "Good but could use more spice",
-    createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000), // 1 day ago
-  },
-  {
-    id: "r4",
-    dishId: "4",
-    userId: "user3",
-    rating: 10,
-    comment: "Perfect ramen! Best I've had.",
-    createdAt: new Date(Date.now() - 3 * 60 * 60 * 1000), // 3 hours ago
-  },
-  {
-    id: "r5",
-    dishId: "5",
-    userId: "user2",
-    rating: 6,
-    comment: "Decent but not amazing",
-    createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // 2 days ago
-  },
-];
+export let users: User[] = getStorageItem("entreete_users", defaultUsers);
 
 // Helper functions
 export function getDishById(id: string): Dish | undefined {
@@ -129,10 +125,12 @@ export function getOrCreateUserFromClerkId(clerkUserId: string, clerkUserName?: 
       varietyScore: 0,
     };
     users.push(user);
+    setStorageItem("entreete_users", users);
   } else {
     // Update existing user with latest Clerk data
     if (clerkUserName) user.name = clerkUserName;
     if (clerkUserImageUrl) user.avatar = clerkUserImageUrl;
+    setStorageItem("entreete_users", users);
   }
   
   return user;
@@ -170,6 +168,8 @@ export function addReview(
   };
   
   reviews.push(newReview);
+  setStorageItem("entreete_reviews", reviews);
+  setStorageItem("entreete_users", users);
   return newReview;
 }
 
@@ -186,6 +186,7 @@ export function deleteReview(reviewId: string, userId: string): boolean {
   
   // Remove the review
   reviews.splice(reviewIndex, 1);
+  setStorageItem("entreete_reviews", reviews);
   
   // Update user's variety score if needed
   const user = users.find((u) => u.id === userId);
@@ -210,6 +211,7 @@ export function deleteReview(reviewId: string, userId: string): boolean {
     }
   }
   
+  setStorageItem("entreete_users", users);
   return true;
 }
 
@@ -228,5 +230,6 @@ export function addDish(
     location,
   };
   dishes.push(newDish);
+  setStorageItem("entreete_dishes", dishes);
   return newDish;
 }
