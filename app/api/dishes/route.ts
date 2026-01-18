@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server'
 import { supabase } from '../../../lib/supabase'
 
 export async function GET(request: Request) {
+  if (!supabase) {
+    return NextResponse.json({ error: 'Supabase not configured' }, { status: 503 })
+  }
   try {
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
@@ -30,6 +33,9 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  if (!supabase) {
+    return NextResponse.json({ error: 'Supabase not configured' }, { status: 503 })
+  }
   try {
     const body = await request.json()
     const { data, error } = await supabase
