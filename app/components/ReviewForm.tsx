@@ -54,28 +54,44 @@ export default function ReviewForm({ dish, userId, onSubmit }: ReviewFormProps) 
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (rating >= 1 && rating <= 10) {
-      // Convert image to base64 if present
+      let imageUrl: string | undefined;
+      
+      // Upload image to Vercel Blob if present
       if (imageFile) {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          const base64String = reader.result as string;
-          onSubmit(rating, comment, base64String);
-          setComment("");
-          setRating(5);
-          setImagePreview(null);
-          setImageFile(null);
-          if (fileInputRef.current) {
-            fileInputRef.current.value = "";
+        try {
+          const formData = new FormData();
+          formData.append('file', imageFile);
+          
+          const uploadResponse = await fetch('/api/upload', {
+            method: 'POST',
+            body: formData,
+          });
+          
+          if (uploadResponse.ok) {
+            const { url } = await uploadResponse.json();
+            imageUrl = url;
+          } else {
+            console.error('Failed to upload image');
+            alert('Failed to upload image. Please try again.');
+            return;
           }
-        };
-        reader.readAsDataURL(imageFile);
-      } else {
-        onSubmit(rating, comment);
-        setComment("");
-        setRating(5);
+        } catch (error) {
+          console.error('Error uploading image:', error);
+          alert('Error uploading image. Please try again.');
+          return;
+        }
+      }
+      
+      onSubmit(rating, comment, imageUrl);
+      setComment("");
+      setRating(5);
+      setImagePreview(null);
+      setImageFile(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
       }
     }
   };

@@ -1,55 +1,55 @@
 import { NextResponse } from 'next/server'
-import { supabase } from '../../../lib/supabase'
+import { 
+  getReviewsByDishId as dbGetReviewsByDishId, 
+  getReviewsByUserId as dbGetReviewsByUserId,
+  getAllReviews as dbGetAllReviews,
+  createReview as dbCreateReview,
+  deleteReview as dbDeleteReview,
+  isPostgresConfigured 
+} from '../../../lib/db'
 
 export async function GET(request: Request) {
-  if (!supabase) {
-    return NextResponse.json({ error: 'Supabase not configured' }, { status: 503 })
+  if (!isPostgresConfigured()) {
+    return NextResponse.json({ error: 'Database not configured' }, { status: 503 })
   }
   try {
     const { searchParams } = new URL(request.url)
     const dishId = searchParams.get('dishId')
     const userId = searchParams.get('userId')
 
-    let query = supabase.from('reviews').select('*')
-
+    let reviews
     if (dishId) {
-      query = query.eq('dish_id', dishId)
-    }
-    if (userId) {
-      query = query.eq('user_id', userId)
+      reviews = await dbGetReviewsByDishId(dishId)
+    } else if (userId) {
+      reviews = await dbGetReviewsByUserId(userId)
+    } else {
+      reviews = await dbGetAllReviews()
     }
 
-    const { data, error } = await query.order('created_at', { ascending: false })
-
-    if (error) throw error
-    return NextResponse.json(data)
+    return NextResponse.json(reviews)
   } catch (error) {
+    console.error('Error fetching reviews:', error)
     return NextResponse.json({ error: 'Failed to fetch reviews' }, { status: 500 })
   }
 }
 
 export async function POST(request: Request) {
-  if (!supabase) {
-    return NextResponse.json({ error: 'Supabase not configured' }, { status: 503 })
+  if (!isPostgresConfigured()) {
+    return NextResponse.json({ error: 'Database not configured' }, { status: 503 })
   }
   try {
     const body = await request.json()
-    const { data, error } = await supabase
-      .from('reviews')
-      .insert([body])
-      .select()
-      .single()
-
-    if (error) throw error
-    return NextResponse.json(data)
+    const review = await dbCreateReview(body)
+    return NextResponse.json(review)
   } catch (error) {
+    console.error('Error creating review:', error)
     return NextResponse.json({ error: 'Failed to create review' }, { status: 500 })
   }
 }
 
 export async function DELETE(request: Request) {
-  if (!supabase) {
-    return NextResponse.json({ error: 'Supabase not configured' }, { status: 503 })
+  if (!isPostgresConfigured()) {
+    return NextResponse.json({ error: 'Database not configured' }, { status: 503 })
   }
   try {
     const { searchParams } = new URL(request.url)
@@ -60,29 +60,11 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: 'Missing id or userId' }, { status: 400 })
     }
 
-    // First verify the review belongs to the user
-    const { data: review, error: fetchError } = await supabase
-      .from('reviews')
-      .select('user_id')
-      .eq('id', id)
-      .single()
-
-    if (fetchError || !review) {
-      return NextResponse.json({ error: 'Review not found' }, { status: 404 })
-    }
-
-    if (review.user_id !== userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
-    }
-
-    const { error } = await supabase
-      .from('reviews')
-      .delete()
-      .eq('id', id)
-
-    if (error) throw error
-    return NextResponse.json({ success: true })
+    const success = await dbDeleteReview(id, userId)
+    return NextResponse.json({ success })
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to delete review' }, { status: 500 })
+    console.error('Error deleting review:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Failed to delete review'
+    return NextResponse.json({ error: errorMessage }, { status: 500 })
   }
 }

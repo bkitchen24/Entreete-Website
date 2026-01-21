@@ -1,9 +1,7 @@
 import { Dish, Review, User, FoodCategory } from "./types";
 
-// Check if Supabase is configured
-const USE_SUPABASE = typeof window !== "undefined" && 
-  process.env.NEXT_PUBLIC_SUPABASE_URL && 
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+// Check if Vercel Postgres is configured (via API routes)
+const USE_VERCEL_POSTGRES = typeof window !== "undefined";
 
 const API_BASE = typeof window !== "undefined" ? window.location.origin : "";
 
@@ -94,7 +92,7 @@ function reloadDataFromStorage() {
 
 // Helper functions
 export async function getDishById(id: string): Promise<Dish | undefined> {
-  if (USE_SUPABASE) {
+  if (USE_VERCEL_POSTGRES) {
     try {
       const response = await fetch(`${API_BASE}/api/dishes?id=${id}`);
       if (!response.ok) return undefined;
@@ -119,7 +117,7 @@ export async function getDishById(id: string): Promise<Dish | undefined> {
 }
 
 export async function getUserById(id: string): Promise<User | undefined> {
-  if (USE_SUPABASE) {
+  if (USE_VERCEL_POSTGRES) {
     try {
       const response = await fetch(`${API_BASE}/api/users?id=${id}`);
       if (!response.ok) return undefined;
@@ -145,7 +143,7 @@ export async function getUserById(id: string): Promise<User | undefined> {
 }
 
 export async function getReviewsByDishId(dishId: string): Promise<Review[]> {
-  if (USE_SUPABASE) {
+  if (USE_VERCEL_POSTGRES) {
     try {
       const response = await fetch(`${API_BASE}/api/reviews?dishId=${dishId}`);
       if (!response.ok) return [];
@@ -171,7 +169,7 @@ export async function getReviewsByDishId(dishId: string): Promise<Review[]> {
 }
 
 export async function getReviewsByUserId(userId: string): Promise<Review[]> {
-  if (USE_SUPABASE) {
+  if (USE_VERCEL_POSTGRES) {
     try {
       const response = await fetch(`${API_BASE}/api/reviews?userId=${userId}`);
       if (!response.ok) return [];
@@ -212,7 +210,7 @@ export function calculateVarietyScore(reviewedCategories: FoodCategory[]): numbe
 
 // Helper function to get or create user from Clerk ID
 export async function getOrCreateUserFromClerkId(clerkUserId: string, clerkUserName?: string, clerkUserImageUrl?: string): Promise<User> {
-  if (USE_SUPABASE) {
+  if (USE_VERCEL_POSTGRES) {
     try {
       // Try to get existing user
       let user = await getUserById(clerkUserId);
@@ -312,7 +310,7 @@ export async function addReview(
   comment?: string,
   imageUrl?: string
 ): Promise<Review> {
-  if (USE_SUPABASE) {
+  if (USE_VERCEL_POSTGRES) {
     try {
       const dish = await getDishById(dishId);
       if (!dish) throw new Error("Dish not found");
@@ -406,7 +404,7 @@ export async function addReview(
 }
 
 export async function deleteReview(reviewId: string, userId: string): Promise<boolean> {
-  if (USE_SUPABASE) {
+  if (USE_VERCEL_POSTGRES) {
     try {
       const response = await fetch(`${API_BASE}/api/reviews?id=${reviewId}&userId=${userId}`, {
         method: "DELETE",
@@ -495,7 +493,7 @@ export async function addDish(
   category: FoodCategory,
   location?: string
 ): Promise<Dish> {
-  if (USE_SUPABASE) {
+  if (USE_VERCEL_POSTGRES) {
     try {
       const newDish = {
         id: `dish-${Date.now()}`,
@@ -542,7 +540,7 @@ export async function addDish(
 
 // Get all users
 export async function getAllUsers(): Promise<User[]> {
-  if (USE_SUPABASE) {
+  if (USE_VERCEL_POSTGRES) {
     try {
       const response = await fetch(`${API_BASE}/api/users`);
       if (!response.ok) return [];
@@ -569,7 +567,7 @@ export async function getAllUsers(): Promise<User[]> {
 
 // Get all dishes
 export async function getAllDishes(): Promise<Dish[]> {
-  if (USE_SUPABASE) {
+  if (USE_VERCEL_POSTGRES) {
     try {
       const response = await fetch(`${API_BASE}/api/dishes`);
       if (!response.ok) return [];
@@ -592,7 +590,7 @@ export async function getAllDishes(): Promise<Dish[]> {
 
 // Get all reviews
 export async function getAllReviews(): Promise<Review[]> {
-  if (USE_SUPABASE) {
+  if (USE_VERCEL_POSTGRES) {
     try {
       const response = await fetch(`${API_BASE}/api/reviews`);
       if (!response.ok) return [];

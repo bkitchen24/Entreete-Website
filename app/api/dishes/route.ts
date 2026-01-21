@@ -1,52 +1,37 @@
 import { NextResponse } from 'next/server'
-import { supabase } from '../../../lib/supabase'
+import { getDishById as dbGetDishById, getAllDishes as dbGetAllDishes, createDish as dbCreateDish, isPostgresConfigured } from '../../../lib/db'
 
 export async function GET(request: Request) {
-  if (!supabase) {
-    return NextResponse.json({ error: 'Supabase not configured' }, { status: 503 })
+  if (!isPostgresConfigured()) {
+    return NextResponse.json({ error: 'Database not configured' }, { status: 503 })
   }
   try {
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
     
     if (id) {
-      const { data, error } = await supabase
-        .from('dishes')
-        .select('*')
-        .eq('id', id)
-        .single()
-      
-      if (error) throw error
-      return NextResponse.json(data)
+      const dish = await dbGetDishById(id)
+      return NextResponse.json(dish)
     } else {
-      const { data, error } = await supabase
-        .from('dishes')
-        .select('*')
-        .order('created_at', { ascending: false })
-
-      if (error) throw error
-      return NextResponse.json(data)
+      const dishes = await dbGetAllDishes()
+      return NextResponse.json(dishes)
     }
   } catch (error) {
+    console.error('Error fetching dishes:', error)
     return NextResponse.json({ error: 'Failed to fetch dishes' }, { status: 500 })
   }
 }
 
 export async function POST(request: Request) {
-  if (!supabase) {
-    return NextResponse.json({ error: 'Supabase not configured' }, { status: 503 })
+  if (!isPostgresConfigured()) {
+    return NextResponse.json({ error: 'Database not configured' }, { status: 503 })
   }
   try {
     const body = await request.json()
-    const { data, error } = await supabase
-      .from('dishes')
-      .insert([body])
-      .select()
-      .single()
-
-    if (error) throw error
-    return NextResponse.json(data)
+    const dish = await dbCreateDish(body)
+    return NextResponse.json(dish)
   } catch (error) {
+    console.error('Error creating dish:', error)
     return NextResponse.json({ error: 'Failed to create dish' }, { status: 500 })
   }
 }
