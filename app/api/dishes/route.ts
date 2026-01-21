@@ -3,7 +3,14 @@ import { getDishById as dbGetDishById, getAllDishes as dbGetAllDishes, createDis
 
 export async function GET(request: Request) {
   if (!isPostgresConfigured()) {
-    return NextResponse.json({ error: 'Database not configured' }, { status: 503 })
+    console.error('Database not configured - DATABASE_URL:', !!process.env.DATABASE_URL, 'POSTGRES_URL:', !!process.env.POSTGRES_URL)
+    return NextResponse.json({ 
+      error: 'Database not configured',
+      debug: {
+        has_database_url: !!process.env.DATABASE_URL,
+        has_postgres_url: !!process.env.POSTGRES_URL,
+      }
+    }, { status: 503 })
   }
   try {
     const { searchParams } = new URL(request.url)
@@ -16,9 +23,12 @@ export async function GET(request: Request) {
       const dishes = await dbGetAllDishes()
       return NextResponse.json(dishes)
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching dishes:', error)
-    return NextResponse.json({ error: 'Failed to fetch dishes' }, { status: 500 })
+    return NextResponse.json({ 
+      error: 'Failed to fetch dishes',
+      message: error?.message || 'Unknown error'
+    }, { status: 500 })
   }
 }
 

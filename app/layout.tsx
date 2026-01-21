@@ -27,14 +27,14 @@ export default function RootLayout({
   
   // If Clerk key is not set, render without ClerkProvider (for build time)
   if (!clerkPublishableKey) {
-    return (
-      <html lang="en">
-        <body
-          className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-        >
-          {children}
-        </body>
-      </html>
+  return (
+    <html lang="en">
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+      >
+        {children}
+      </body>
+    </html>
     );
   }
   
