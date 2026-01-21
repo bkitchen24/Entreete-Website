@@ -230,7 +230,9 @@ export async function createReview(review: {
   image_url?: string
 }) {
   const sql = getSqlClient()
-  if (!sql) return null
+  if (!sql) {
+    throw new Error('Database connection not available')
+  }
   
   try {
     const result = await sql`
@@ -246,11 +248,25 @@ export async function createReview(review: {
       RETURNING *
     `
     await sql.end()
+    
+    if (!result || result.length === 0) {
+      throw new Error('Review was not created - no data returned from database')
+    }
+    
     return result[0]
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating review:', error)
     if (sql) await sql.end().catch(() => {})
-    throw error
+    
+    // Provide more specific error messages
+    if (error?.code === '23503') {
+      throw new Error('Dish or user not found in database')
+    }
+    if (error?.code === '23505') {
+      throw new Error('Review with this ID already exists')
+    }
+    
+    throw new Error(error?.message || 'Failed to create review in database')
   }
 }
 

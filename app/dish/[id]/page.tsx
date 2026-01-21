@@ -57,7 +57,9 @@ export default function DishPage() {
   }, [dishId]);
 
   const handleReviewSubmit = async (rating: number, comment: string, imageUrl?: string) => {
-    if (!dish || !isSignedIn || !clerkUser) return;
+    if (!dish || !isSignedIn || !clerkUser) {
+      throw new Error("You must be signed in to submit a review");
+    }
 
     try {
       const appUser = await getOrCreateUserFromClerkId(
@@ -67,11 +69,36 @@ export default function DishPage() {
       );
       
       await addReview(dish.id, appUser.id, rating, comment, imageUrl);
+      
+      // Reload reviews and users after successful submission
       const dishReviews = await getReviewsByDishId(dishId);
       setReviews(dishReviews);
+      
+      // Reload users for the reviews
+      const usersMap = new Map<string, User>();
+      for (const review of dishReviews) {
+        if (!usersMap.has(review.userId)) {
+          const user = await getUserById(review.userId);
+          if (user) {
+            usersMap.set(review.userId, user);
+          } else {
+            usersMap.set(review.userId, {
+              id: review.userId,
+              name: "Unknown User",
+              username: `@user${review.userId.slice(0, 8)}`,
+              following: [],
+              reviewedCategories: [],
+              varietyScore: 0,
+            });
+          }
+        }
+      }
+      setReviewUsers(usersMap);
+      
       setShowReviewForm(false);
     } catch (error) {
       console.error("Error submitting review:", error);
+      throw error; // Re-throw so ReviewForm can handle it
     }
   };
 

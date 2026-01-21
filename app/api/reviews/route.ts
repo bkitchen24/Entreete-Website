@@ -39,11 +39,25 @@ export async function POST(request: Request) {
   }
   try {
     const body = await request.json()
+    
+    // Validate required fields
+    if (!body.dish_id || !body.user_id || !body.rating) {
+      return NextResponse.json({ 
+        error: 'Missing required fields: dish_id, user_id, and rating are required' 
+      }, { status: 400 })
+    }
+    
     const review = await dbCreateReview(body)
+    
+    if (!review) {
+      return NextResponse.json({ error: 'Failed to create review - no data returned' }, { status: 500 })
+    }
+    
     return NextResponse.json(review)
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating review:', error)
-    return NextResponse.json({ error: 'Failed to create review' }, { status: 500 })
+    const errorMessage = error?.message || 'Failed to create review'
+    return NextResponse.json({ error: errorMessage }, { status: 500 })
   }
 }
 

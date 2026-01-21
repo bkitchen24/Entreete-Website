@@ -9,7 +9,7 @@ import { Dish } from "../types";
 interface ReviewFormProps {
   dish: Dish;
   userId: string;
-  onSubmit: (rating: number, comment: string, imageUrl?: string) => void;
+  onSubmit: (rating: number, comment: string, imageUrl?: string) => Promise<void>;
 }
 
 export default function ReviewForm({ dish, userId, onSubmit }: ReviewFormProps) {
@@ -18,6 +18,8 @@ export default function ReviewForm({ dish, userId, onSubmit }: ReviewFormProps) 
   const [comment, setComment] = useState("");
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -54,44 +56,64 @@ export default function ReviewForm({ dish, userId, onSubmit }: ReviewFormProps) 
     }
   };
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (rating >= 1 && rating <= 10) {
-      let imageUrl: string | undefined;
+      setIsSubmitting(true);
+      setError(null);
       
-      // Upload image to Vercel Blob if present
-      if (imageFile) {
-        try {
-          const formData = new FormData();
-          formData.append('file', imageFile);
-          
-          const uploadResponse = await fetch('/api/upload', {
-            method: 'POST',
-            body: formData,
-          });
-          
-          if (uploadResponse.ok) {
-            const { url } = await uploadResponse.json();
-            imageUrl = url;
-          } else {
-            console.error('Failed to upload image');
-            alert('Failed to upload image. Please try again.');
+      try {
+        let imageUrl: string | undefined;
+        
+        // Upload image to Vercel Blob if present
+        if (imageFile) {
+          try {
+            const formData = new FormData();
+            formData.append('file', imageFile);
+            
+            const uploadResponse = await fetch('/api/upload', {
+              method: 'POST',
+              body: formData,
+            });
+            
+            if (uploadResponse.ok) {
+              const { url } = await uploadResponse.json();
+              imageUrl = url;
+            } else {
+              const errorData = await uploadResponse.json().catch(() => ({}));
+              throw new Error(errorData.error || 'Failed to upload image');
+            }
+          } catch (error) {
+            console.error('Error uploading image:', error);
+            setError(error instanceof Error ? error.message : 'Failed to upload image. Please try again.');
+            setIsSubmitting(false);
             return;
           }
-        } catch (error) {
-          console.error('Error uploading image:', error);
-          alert('Error uploading image. Please try again.');
-          return;
         }
-      }
-      
-      onSubmit(rating, comment, imageUrl);
-      setComment("");
-      setRating(5);
-      setImagePreview(null);
-      setImageFile(null);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
+        
+        // Call onSubmit and wait for it to complete
+        await onSubmit(rating, comment, imageUrl);
+        
+        // Only clear form if submission was successful (no error thrown)
+        setComment("");
+        setRating(5);
+        setImagePreview(null);
+        setImageFile(null);
+        setError(null); // Clear any previous errors
+        if (fileInputRef.current) {
+          fileInputRef.current.value = "";
+        }
+      } catch (error) {
+        console.error('Error submitting review:', error);
+        const errorMessage = error instanceof Error 
+          ? error.message 
+          : 'Failed to submit review. Please check your connection and try again.';
+        setError(errorMessage);
+      } finally {
+        setIsSubmitting(false);
       }
     }
   };
@@ -201,12 +223,19 @@ export default function ReviewForm({ dish, userId, onSubmit }: ReviewFormProps) 
         </p>
       </div>
 
+      {error && (
+        <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+          <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+        </div>
+      )}
+
       <button
         type="submit"
-        className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 rounded-lg font-medium hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors"
+        disabled={isSubmitting}
+        className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 rounded-lg font-medium hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       >
         <Send className="w-4 h-4" />
-        Submit Review
+        {isSubmitting ? "Submitting..." : "Submit Review"}
       </button>
     </form>
   );

@@ -356,7 +356,17 @@ export async function addReview(
         body: JSON.stringify(newReview),
       });
       
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Failed to create review' }));
+        throw new Error(errorData.error || `Failed to create review: ${response.status} ${response.statusText}`);
+      }
+      
       const dbReview = await response.json();
+      
+      if (!dbReview || dbReview.error) {
+        throw new Error(dbReview?.error || 'Failed to create review');
+      }
+      
       return {
         id: dbReview.id,
         dishId: dbReview.dish_id,
