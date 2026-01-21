@@ -1,12 +1,17 @@
-import { clerkMiddleware } from '@clerk/nextjs/server'
+import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
 
-export default clerkMiddleware({
+// Define public routes that don't require authentication
+const isPublicRoute = createRouteMatcher([
+  '/api/test-db',
+  '/api/verify-tables',
+  '/api/debug-db',
+])
+
+export default clerkMiddleware(async (auth, req) => {
   // Allow public access to test/verification endpoints
-  publicRoutes: [
-    '/api/test-db',
-    '/api/verify-tables',
-    '/api/debug-db',
-  ],
+  if (!isPublicRoute(req)) {
+    await auth.protect()
+  }
 })
 
 export const config = {
