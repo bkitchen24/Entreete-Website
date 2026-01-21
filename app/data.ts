@@ -287,22 +287,19 @@ export async function getOrCreateUserFromClerkId(clerkUserId: string, clerkUserN
       
       // Final verification - ensure user exists in database
       if (!user) {
-        throw new Error('User not found in database');
+        throw new Error('User not found in database after creation attempt');
       }
       
       return user;
     } catch (error) {
       console.error("Error getting/creating user:", error);
-      // Fallback user
-      return {
-        id: clerkUserId,
-        name: clerkUserName || "User",
-        username: `@${clerkUserId.slice(0, 8)}`,
-        avatar: clerkUserImageUrl,
-        following: [],
-        reviewedCategories: [],
-        varietyScore: 0,
-      };
+      // Don't return a fallback user - throw the error so the caller knows it failed
+      // This prevents the "user not found" error later when trying to add a review
+      throw new Error(
+        error instanceof Error 
+          ? `Failed to create user account: ${error.message}` 
+          : 'Failed to create user account. Please try refreshing the page.'
+      );
     }
   }
   
@@ -342,8 +339,14 @@ export async function addReview(
       const dish = await getDishById(dishId);
       if (!dish) throw new Error("Dish not found");
       
-      const user = await getUserById(userId);
-      if (!user) throw new Error("User not found");
+      // Try to get user, if not found, try to create it
+      let user = await getUserById(userId);
+      if (!user) {
+        // User doesn't exist - this shouldn't happen if getOrCreateUserFromClerkId worked
+        // But let's try to create it anyway as a fallback
+        console.warn(`User ${userId} not found, attempting to create...`);
+        throw new Error(`User not found in database. Please refresh the page and try again.`);
+      }
       
       // Check if this is a new category for the user
       const isNewCategory = !user.reviewedCategories.includes(dish.category);

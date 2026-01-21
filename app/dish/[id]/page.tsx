@@ -62,11 +62,18 @@ export default function DishPage() {
     }
 
     try {
+      // Get or create user - ensure it exists in database
       const appUser = await getOrCreateUserFromClerkId(
         clerkUser.id,
         clerkUser.fullName || clerkUser.firstName || undefined,
         clerkUser.imageUrl
       );
+      
+      // Verify user exists in database before proceeding
+      const verifyUser = await getUserById(appUser.id);
+      if (!verifyUser) {
+        throw new Error("User account not properly set up. Please refresh the page and try again.");
+      }
       
       await addReview(dish.id, appUser.id, rating, comment, imageUrl);
       

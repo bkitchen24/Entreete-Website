@@ -2,11 +2,13 @@
 
 import { useState, useEffect } from "react";
 import { useUser } from "@clerk/nextjs";
+import { SignOutButton } from "@clerk/nextjs";
 import { getUserById, getReviewsByUserId, getDishById, getOrCreateUserFromClerkId, deleteReview } from "../data";
 import UserProfile from "../components/UserProfile";
 import ReviewCard from "../components/ReviewCard";
 import Navigation from "../components/Navigation";
 import { Review, Dish, User } from "../types";
+import { LogOut } from "lucide-react";
 
 export default function ProfilePage() {
   const { user: clerkUser, isSignedIn } = useUser();
@@ -88,7 +90,15 @@ export default function ProfilePage() {
   return (
     <div className="min-h-screen bg-gray-100 pb-20">
       <div className="max-w-3xl mx-auto px-4 py-6">
-        <UserProfile user={user} />
+        <div className="flex items-center justify-between mb-6">
+          <UserProfile user={user} />
+          <SignOutButton>
+            <button className="flex items-center gap-2 px-4 py-2 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 rounded-lg font-medium hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors">
+              <LogOut className="w-4 h-4" />
+              Sign Out
+            </button>
+          </SignOutButton>
+        </div>
 
         <div className="mt-8">
           <h2 className="text-xl font-bold text-zinc-900 mb-4">
