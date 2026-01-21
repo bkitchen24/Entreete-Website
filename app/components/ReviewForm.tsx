@@ -56,9 +56,6 @@ export default function ReviewForm({ dish, userId, onSubmit }: ReviewFormProps) 
     }
   };
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (rating >= 1 && rating <= 10) {
