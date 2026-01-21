@@ -233,22 +233,34 @@ export async function getOrCreateUserFromClerkId(clerkUserId: string, clerkUserN
           body: JSON.stringify(newUser),
         });
         
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({ error: 'Failed to create user' }));
+          throw new Error(errorData.error || `Failed to create user: ${response.status}`);
+        }
+        
         const dbUser = await response.json();
-        user = {
-          id: dbUser.id,
-          name: dbUser.name,
-          username: dbUser.username,
-          avatar: dbUser.avatar,
-          following: dbUser.following || [],
-          reviewedCategories: dbUser.reviewed_categories || [],
-          varietyScore: dbUser.variety_score || 0,
-        };
+        
+        if (!dbUser || dbUser.error) {
+          throw new Error(dbUser?.error || 'Failed to create user - no data returned');
+        }
+        
+        // Verify user was created by fetching it
+        user = await getUserById(clerkUserId);
+        if (!user) {
+          // Retry once after a short delay
+          await new Promise(resolve => setTimeout(resolve, 100));
+          user = await getUserById(clerkUserId);
+        }
+        
+        if (!user) {
+          throw new Error('User was created but could not be retrieved from database');
+        }
       } else {
         // Update existing user
         if (clerkUserName) user.name = clerkUserName;
         if (clerkUserImageUrl) user.avatar = clerkUserImageUrl;
         
-        await fetch(`${API_BASE}/api/users`, {
+        const updateResponse = await fetch(`${API_BASE}/api/users`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -261,6 +273,21 @@ export async function getOrCreateUserFromClerkId(clerkUserId: string, clerkUserN
             variety_score: user.varietyScore,
           }),
         });
+        
+        if (!updateResponse.ok) {
+          console.warn('Failed to update user, but continuing with existing user data');
+        } else {
+          // Refresh user data from database
+          const updatedUser = await getUserById(clerkUserId);
+          if (updatedUser) {
+            user = updatedUser;
+          }
+        }
+      }
+      
+      // Final verification - ensure user exists in database
+      if (!user) {
+        throw new Error('User not found in database');
       }
       
       return user;

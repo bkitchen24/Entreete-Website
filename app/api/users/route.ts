@@ -28,10 +28,24 @@ export async function POST(request: Request) {
   }
   try {
     const body = await request.json()
+    
+    // Validate required fields
+    if (!body.id || !body.name || !body.username) {
+      return NextResponse.json({ 
+        error: 'Missing required fields: id, name, and username are required' 
+      }, { status: 400 })
+    }
+    
     const user = await dbCreateOrUpdateUser(body)
+    
+    if (!user) {
+      return NextResponse.json({ error: 'Failed to create/update user - no data returned' }, { status: 500 })
+    }
+    
     return NextResponse.json(user)
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating/updating user:', error)
-    return NextResponse.json({ error: 'Failed to create/update user' }, { status: 500 })
+    const errorMessage = error?.message || 'Failed to create/update user'
+    return NextResponse.json({ error: errorMessage }, { status: 500 })
   }
 }
